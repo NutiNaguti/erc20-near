@@ -1,7 +1,7 @@
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     env::predecessor_account_id,
-    near_bindgen, require,
+    require,
     store::UnorderedMap,
     AccountId, BorshStorageKey,
 };
@@ -55,9 +55,7 @@ impl ERC20 {
     }
 
     pub fn transfer(&mut self, to: AccountId, value: u64) -> bool {
-        let user_balance = self.balance_of(predecessor_account_id()).unwrap();
-        println!("user balance: {:#?}", user_balance);
-        println!("value: {:#?}", value);
+        let user_balance = self.balance_of(predecessor_account_id()).unwrap_or(&0u64);
         require!(*user_balance >= value);
         self.balance
             .insert(predecessor_account_id(), user_balance - value);
@@ -75,17 +73,8 @@ impl ERC20 {
 
     pub fn transfer_from(&mut self, from: AccountId, to: AccountId, value: u64) -> bool {
         let user_balance = self.balance_of(from.clone()).unwrap();
-        println!("user balance: {:#?}", user_balance);
-        println!("value: {:#?}", value);
         require!(*user_balance >= value);
-        require!(
-            self.allowed
-                .get(&from)
-                .unwrap()
-                .get(&predecessor_account_id())
-                .unwrap()
-                >= &value
-        );
+        require!(self.allowance(from.clone(), predecessor_account_id()) >= &value);
         self.balance.insert(from, user_balance - value).unwrap();
 
         let mut receiver_balance = self.balance_of(to.clone()).unwrap_or(&0u64);
@@ -123,7 +112,12 @@ impl ERC20 {
             self.balance.insert(to.clone(), 0);
         }
         *self.balance.get_mut(&to).unwrap() += value;
-        println!("\n\nbalance: {:#?}\n\n", self.balance.get(&to));
+    }
+
+    pub fn burn(&mut self, account_id: AccountId, value: u64) {
+        require!(value != 0);
+        require!(*self.balance_of(account_id.clone()).unwrap_or(&0u64) >= value);
+        *self.balance.get_mut(&account_id).unwrap() -= value;
     }
 }
 
