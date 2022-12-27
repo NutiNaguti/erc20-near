@@ -17,13 +17,13 @@ pub struct ERC20 {
     pub name: String,
     pub symbol: String,
     pub decimals: u8,
-    pub total_supply: u64,
-    pub balance: UnorderedMap<AccountId, u64>,
-    pub allowed: UnorderedMap<AccountId, UnorderedMap<AccountId, u64>>,
+    pub total_supply: u128,
+    pub balance: UnorderedMap<AccountId, u128>,
+    pub allowed: UnorderedMap<AccountId, UnorderedMap<AccountId, u128>>,
 }
 
 impl ERC20 {
-    pub fn init(name: String, symbol: String, decimals: u8, total_supply: u64) -> Self {
+    pub fn init(name: String, symbol: String, decimals: u8, total_supply: u128) -> Self {
         Self {
             name,
             symbol,
@@ -46,24 +46,24 @@ impl ERC20 {
         &self.decimals
     }
 
-    pub fn total_supply(&self) -> &u64 {
+    pub fn total_supply(&self) -> &u128 {
         &self.total_supply
     }
 
-    pub fn balance_of(&self, account_id: AccountId) -> Option<&u64> {
+    pub fn balance_of(&self, account_id: AccountId) -> Option<&u128> {
         self.balance.get(&account_id)
     }
 
-    pub fn transfer(&mut self, to: AccountId, value: u64) -> bool {
-        let user_balance = self.balance_of(predecessor_account_id()).unwrap_or(&0u64);
+    pub fn transfer(&mut self, to: AccountId, value: u128) -> bool {
+        let user_balance = self.balance_of(predecessor_account_id()).unwrap_or(&0u128);
         require!(*user_balance >= value);
         self.balance
             .insert(predecessor_account_id(), user_balance - value);
 
-        let mut receiver_balance = self.balance_of(to.clone()).unwrap_or(&0u64);
+        let mut receiver_balance = self.balance_of(to.clone()).unwrap_or(&0u128);
         if let 0 = receiver_balance {
-            self.balance.insert(predecessor_account_id().clone(), 0u64);
-            receiver_balance = &0u64;
+            self.balance.insert(predecessor_account_id().clone(), 0u128);
+            receiver_balance = &0u128;
         }
 
         self.balance.insert(to, receiver_balance + value);
@@ -71,16 +71,16 @@ impl ERC20 {
         true
     }
 
-    pub fn transfer_from(&mut self, from: AccountId, to: AccountId, value: u64) -> bool {
+    pub fn transfer_from(&mut self, from: AccountId, to: AccountId, value: u128) -> bool {
         let user_balance = self.balance_of(from.clone()).unwrap();
         require!(*user_balance >= value);
         require!(self.allowance(from.clone(), predecessor_account_id()) >= &value);
         self.balance.insert(from, user_balance - value).unwrap();
 
-        let mut receiver_balance = self.balance_of(to.clone()).unwrap_or(&0u64);
+        let mut receiver_balance = self.balance_of(to.clone()).unwrap_or(&0u128);
         if let 0 = receiver_balance {
-            self.balance.insert(predecessor_account_id().clone(), 0u64);
-            receiver_balance = &0u64;
+            self.balance.insert(predecessor_account_id().clone(), 0u128);
+            receiver_balance = &0u128;
         }
 
         self.balance.insert(to, receiver_balance + value).unwrap();
@@ -88,7 +88,7 @@ impl ERC20 {
         true
     }
 
-    pub fn approve(&mut self, spender: AccountId, value: u64) {
+    pub fn approve(&mut self, spender: AccountId, value: u128) {
         let allowance_exist = self.allowed.contains_key(&predecessor_account_id());
         if let false = allowance_exist {
             self.allowed.insert(
@@ -103,20 +103,20 @@ impl ERC20 {
             .insert(spender, value);
     }
 
-    pub fn allowance(&self, owner: AccountId, spender: AccountId) -> &u64 {
+    pub fn allowance(&self, owner: AccountId, spender: AccountId) -> &u128 {
         self.allowed.get(&owner).unwrap().get(&spender).unwrap()
     }
 
-    pub fn mint(&mut self, to: AccountId, value: u64) {
+    pub fn mint(&mut self, to: AccountId, value: u128) {
         if let false = self.balance.contains_key(&to) {
             self.balance.insert(to.clone(), 0);
         }
         *self.balance.get_mut(&to).unwrap() += value;
     }
 
-    pub fn burn(&mut self, account_id: AccountId, value: u64) {
+    pub fn burn(&mut self, account_id: AccountId, value: u128) {
         require!(value != 0);
-        require!(*self.balance_of(account_id.clone()).unwrap_or(&0u64) >= value);
+        require!(*self.balance_of(account_id.clone()).unwrap_or(&0u128) >= value);
         *self.balance.get_mut(&account_id).unwrap() -= value;
     }
 }
@@ -127,7 +127,7 @@ mod tests {
     use near_sdk::{base64::encode, test_utils::VMContextBuilder, testing_env};
 
     const DECIMALS: u8 = 18;
-    const TOTAL_SUPPLY: u64 = 10 ^ 9;
+    const TOTAL_SUPPLY: u128 = 10u128.pow(9);
 
     fn get_context(predecessor: String) -> VMContextBuilder {
         let mut builder = VMContextBuilder::new();
@@ -193,13 +193,13 @@ mod tests {
         contract.mint("nutinaguti.testnet".parse().unwrap(), 1);
         contract.transfer("test.testnet".parse().unwrap(), 1);
         assert_eq!(
-            0u64,
+            0u128,
             *contract
                 .balance_of("nutinaguti.testnet".parse().unwrap())
                 .unwrap()
         );
         assert_eq!(
-            1u64,
+            1u128,
             *contract
                 .balance_of("test.testnet".parse().unwrap())
                 .unwrap()
