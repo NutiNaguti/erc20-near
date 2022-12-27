@@ -1,6 +1,7 @@
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     env::predecessor_account_id,
+    json_types::U128,
     require,
     store::UnorderedMap,
     AccountId, BorshStorageKey,
@@ -23,12 +24,12 @@ pub struct ERC20 {
 }
 
 impl ERC20 {
-    pub fn init(name: String, symbol: String, decimals: u8, total_supply: u128) -> Self {
+    pub fn init(name: String, symbol: String, decimals: u8, total_supply: U128) -> Self {
         Self {
             name,
             symbol,
             decimals,
-            total_supply,
+            total_supply: total_supply.into(),
             balance: UnorderedMap::new(StorageKey::Balance),
             allowed: UnorderedMap::new(StorageKey::Allowed),
         }
@@ -54,8 +55,9 @@ impl ERC20 {
         self.balance.get(&account_id)
     }
 
-    pub fn transfer(&mut self, to: AccountId, value: u128) -> bool {
+    pub fn transfer(&mut self, to: AccountId, value: U128) -> bool {
         let user_balance = self.balance_of(predecessor_account_id()).unwrap_or(&0u128);
+        let value = value.into();
         require!(*user_balance >= value);
         self.balance
             .insert(predecessor_account_id(), user_balance - value);
@@ -71,8 +73,9 @@ impl ERC20 {
         true
     }
 
-    pub fn transfer_from(&mut self, from: AccountId, to: AccountId, value: u128) -> bool {
+    pub fn transfer_from(&mut self, from: AccountId, to: AccountId, value: U128) -> bool {
         let user_balance = self.balance_of(from.clone()).unwrap();
+        let value = value.into();
         require!(*user_balance >= value);
         require!(self.allowance(from.clone(), predecessor_account_id()) >= &value);
         self.balance.insert(from, user_balance - value).unwrap();
@@ -88,7 +91,7 @@ impl ERC20 {
         true
     }
 
-    pub fn approve(&mut self, spender: AccountId, value: u128) {
+    pub fn approve(&mut self, spender: AccountId, value: U128) {
         let allowance_exist = self.allowed.contains_key(&predecessor_account_id());
         if let false = allowance_exist {
             self.allowed.insert(
@@ -100,24 +103,24 @@ impl ERC20 {
         self.allowed
             .get_mut(&predecessor_account_id())
             .unwrap()
-            .insert(spender, value);
+            .insert(spender, value.into());
     }
 
     pub fn allowance(&self, owner: AccountId, spender: AccountId) -> &u128 {
         self.allowed.get(&owner).unwrap().get(&spender).unwrap()
     }
 
-    pub fn mint(&mut self, to: AccountId, value: u128) {
+    pub fn mint(&mut self, to: AccountId, value: U128) {
         if let false = self.balance.contains_key(&to) {
             self.balance.insert(to.clone(), 0);
         }
-        *self.balance.get_mut(&to).unwrap() += value;
+        *self.balance.get_mut(&to).unwrap() += value.0;
     }
 
-    pub fn burn(&mut self, account_id: AccountId, value: u128) {
-        require!(value != 0);
-        require!(*self.balance_of(account_id.clone()).unwrap_or(&0u128) >= value);
-        *self.balance.get_mut(&account_id).unwrap() -= value;
+    pub fn burn(&mut self, account_id: AccountId, value: U128) {
+        require!(value.0 != 0);
+        require!(*self.balance_of(account_id.clone()).unwrap_or(&0u128) >= value.0);
+        *self.balance.get_mut(&account_id).unwrap() -= value.0;
     }
 }
 
@@ -145,16 +148,16 @@ mod tests {
             "FUN COIN".to_string(),
             "FUNC".to_string(),
             DECIMALS,
-            TOTAL_SUPPLY,
+            TOTAL_SUPPLY.into(),
         );
-        contract.approve("test.testnet".parse().unwrap(), 1);
+        contract.approve("test.testnet".parse().unwrap(), 1.into());
         let allowance = contract.allowance(
             "nutinaguti.testnet".parse().unwrap(),
             "test.testnet".parse().unwrap(),
         );
         assert_eq!(1, *allowance);
 
-        contract.approve("test.testnet".parse().unwrap(), 2);
+        contract.approve("test.testnet".parse().unwrap(), 2.into());
         let allowance = contract.allowance(
             "nutinaguti.testnet".parse().unwrap(),
             "test.testnet".parse().unwrap(),
@@ -173,9 +176,9 @@ mod tests {
             "FUN COIN".to_string(),
             "FUNC".to_string(),
             DECIMALS,
-            TOTAL_SUPPLY,
+            TOTAL_SUPPLY.into(),
         );
-        contract.transfer("test.testnet".parse().unwrap(), 1);
+        contract.transfer("test.testnet".parse().unwrap(), 1.into());
     }
 
     #[test]
@@ -188,10 +191,10 @@ mod tests {
             "FUN COIN".to_string(),
             "FUNC".to_string(),
             DECIMALS,
-            TOTAL_SUPPLY,
+            TOTAL_SUPPLY.into(),
         );
-        contract.mint("nutinaguti.testnet".parse().unwrap(), 1);
-        contract.transfer("test.testnet".parse().unwrap(), 1);
+        contract.mint("nutinaguti.testnet".parse().unwrap(), 1.into());
+        contract.transfer("test.testnet".parse().unwrap(), 1.into());
         assert_eq!(
             0u128,
             *contract
@@ -217,13 +220,13 @@ mod tests {
             "FUN COIN".to_string(),
             "FUNC".to_string(),
             DECIMALS,
-            TOTAL_SUPPLY,
+            TOTAL_SUPPLY.into(),
         );
-        contract.mint("test.testnet".parse().unwrap(), 1);
+        contract.mint("test.testnet".parse().unwrap(), 1.into());
         contract.transfer_from(
             "test.testnet".parse().unwrap(),
             "nutinaguti.testnet".parse().unwrap(),
-            1,
+            1.into(),
         );
     }
 
@@ -240,18 +243,18 @@ mod tests {
             "FUN COIN".to_string(),
             "FUNC".to_string(),
             DECIMALS,
-            TOTAL_SUPPLY,
+            TOTAL_SUPPLY.into(),
         );
-        contract.mint("test.testnet".parse().unwrap(), 1);
+        contract.mint("test.testnet".parse().unwrap(), 1.into());
 
         testing_env!(context_2.build());
-        contract.approve("nutinaguti.testnet".parse().unwrap(), 1);
+        contract.approve("nutinaguti.testnet".parse().unwrap(), 1.into());
         testing_env!(context.build());
 
         contract.transfer_from(
             "test.testnet".parse().unwrap(),
             "nutinaguti.testnet".parse().unwrap(),
-            1,
+            1.into(),
         );
     }
 }
