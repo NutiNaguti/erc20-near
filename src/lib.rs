@@ -13,7 +13,7 @@ pub enum StorageKey {
     Allowed,
 }
 
-#[derive(BorshSerialize, BorshDeserialize)]
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub struct ERC20 {
     pub name: String,
     pub symbol: String,
