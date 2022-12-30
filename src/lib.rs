@@ -2,7 +2,7 @@ use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     env::predecessor_account_id,
     json_types::U128,
-    require,
+    log, require,
     store::UnorderedMap,
     AccountId, BorshStorageKey,
 };
@@ -111,6 +111,7 @@ impl ERC20 {
     }
 
     pub fn mint(&mut self, to: AccountId, value: U128) {
+        log!("Mint!");
         if let false = self.balance.contains_key(&to) {
             self.balance.insert(to.clone(), 0);
         }
