@@ -1,6 +1,6 @@
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
-    env::predecessor_account_id,
+    env::{log, predecessor_account_id},
     json_types::U128,
     log, require,
     store::UnorderedMap,
@@ -113,9 +113,11 @@ impl ERC20 {
     pub fn mint(&mut self, to: AccountId, value: U128) {
         log!("Mint!");
         if let false = self.balance.contains_key(&to) {
+            log!("key exist: {}", self.balance.contains_key(&to));
             self.balance.insert(to.clone(), 0);
         }
-        *self.balance.get_mut(&to).unwrap() += value.0;
+        let temp = self.balance.get(&to).expect("get failed");
+        *self.balance.get_mut(&to).expect("get_mut failed") = value.0 + temp;
     }
 
     pub fn burn(&mut self, account_id: AccountId, value: U128) {
