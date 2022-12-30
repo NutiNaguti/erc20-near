@@ -111,9 +111,9 @@ impl ERC20 {
     }
 
     pub fn mint(&mut self, to: AccountId, value: U128) {
-        log!("Mint!");
+        // log!("Mint!");
         log!("key exist: {}", self.balance.contains_key(&to));
-        log!("Balance: {}", self.balance.get(&to).unwrap());
+        log!("Balance: {:?}", self.balance.get(&to));
         if let false = self.balance.contains_key(&to) {
             self.balance.insert(to.clone(), 0);
         }
