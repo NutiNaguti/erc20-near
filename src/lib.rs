@@ -1,10 +1,10 @@
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
-    env::{log, predecessor_account_id},
+    env::predecessor_account_id,
     json_types::U128,
     log, require,
     store::UnorderedMap,
-    AccountId, BorshStorageKey, IntoStorageKey,
+    AccountId, IntoStorageKey,
 };
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
@@ -136,7 +136,7 @@ impl ERC20 {
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use near_sdk::{base64::encode, test_utils::VMContextBuilder, testing_env};
+    use near_sdk::{test_utils::VMContextBuilder, testing_env, BorshStorageKey};
 
     const DECIMALS: u8 = 18;
     const TOTAL_SUPPLY: u128 = 10u128.pow(9);
