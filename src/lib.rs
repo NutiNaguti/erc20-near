@@ -4,14 +4,8 @@ use near_sdk::{
     json_types::U128,
     log, require,
     store::UnorderedMap,
-    AccountId, BorshStorageKey,
+    AccountId, BorshStorageKey, IntoStorageKey,
 };
-
-#[derive(BorshSerialize, BorshDeserialize, BorshStorageKey)]
-pub enum StorageKey {
-    Balance,
-    Allowed,
-}
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub struct ERC20 {
@@ -24,14 +18,25 @@ pub struct ERC20 {
 }
 
 impl ERC20 {
-    pub fn init(name: String, symbol: String, decimals: u8, total_supply: U128) -> Self {
+    pub fn init<B, A>(
+        name: String,
+        symbol: String,
+        decimals: u8,
+        total_supply: U128,
+        balance_prefix: B,
+        allowed_prefix: A,
+    ) -> Self
+    where
+        B: IntoStorageKey,
+        A: IntoStorageKey,
+    {
         Self {
             name,
             symbol,
             decimals,
             total_supply: total_supply.into(),
-            balance: UnorderedMap::new(StorageKey::Balance),
-            allowed: UnorderedMap::new(StorageKey::Allowed),
+            balance: UnorderedMap::new(balance_prefix),
+            allowed: UnorderedMap::new(allowed_prefix),
         }
     }
 
@@ -111,11 +116,11 @@ impl ERC20 {
     }
 
     pub fn mint(&mut self, to: AccountId, value: U128) {
-        // log!("Mint!");
         log!("key exist: {}", self.balance.contains_key(&to));
         log!("Balance: {:?}", self.balance.get(&to));
         if let false = self.balance.contains_key(&to) {
-            self.balance.insert(to.clone(), 0);
+            self.balance.insert(to.clone(), value.0);
+            return;
         }
         let temp = self.balance.get(&to).expect("get failed");
         *self.balance.get_mut(&to).expect("get_mut failed") = value.0 + temp;
@@ -136,6 +141,12 @@ mod tests {
     const DECIMALS: u8 = 18;
     const TOTAL_SUPPLY: u128 = 10u128.pow(9);
 
+    #[derive(BorshSerialize, BorshDeserialize, BorshStorageKey)]
+    enum StorageKey {
+        Balance,
+        Allowed,
+    }
+
     fn get_context(predecessor: String) -> VMContextBuilder {
         let mut builder = VMContextBuilder::new();
         builder.predecessor_account_id(predecessor.parse().unwrap());
@@ -153,6 +164,8 @@ mod tests {
             "FUNC".to_string(),
             DECIMALS,
             TOTAL_SUPPLY.into(),
+            StorageKey::Balance,
+            StorageKey::Allowed,
         );
         contract.approve("test.testnet".parse().unwrap(), 1.into());
         let allowance = contract.allowance(
@@ -181,6 +194,8 @@ mod tests {
             "FUNC".to_string(),
             DECIMALS,
             TOTAL_SUPPLY.into(),
+            StorageKey::Balance,
+            StorageKey::Allowed,
         );
         contract.transfer("test.testnet".parse().unwrap(), 1.into());
     }
@@ -196,6 +211,8 @@ mod tests {
             "FUNC".to_string(),
             DECIMALS,
             TOTAL_SUPPLY.into(),
+            StorageKey::Balance,
+            StorageKey::Allowed,
         );
         contract.mint("nutinaguti.testnet".parse().unwrap(), 1.into());
         contract.transfer("test.testnet".parse().unwrap(), 1.into());
@@ -225,6 +242,8 @@ mod tests {
             "FUNC".to_string(),
             DECIMALS,
             TOTAL_SUPPLY.into(),
+            StorageKey::Balance,
+            StorageKey::Allowed,
         );
         contract.mint("test.testnet".parse().unwrap(), 1.into());
         contract.transfer_from(
@@ -248,6 +267,8 @@ mod tests {
             "FUNC".to_string(),
             DECIMALS,
             TOTAL_SUPPLY.into(),
+            StorageKey::Balance,
+            StorageKey::Allowed,
         );
         contract.mint("test.testnet".parse().unwrap(), 1.into());
 
